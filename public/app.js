@@ -15,7 +15,7 @@ $("submit").onclick=manualSubmit;
 function manualSubmit(){if(!chosen.length)return $("status").textContent="Add at least one word first.";$("status").textContent="Submitting…";socket.emit("submit",{roomCode,words:chosen.map(i=>myTiles[i])},r=>{$("status").textContent=r.error||"Submitted! Waiting for everyone…";});}
 function sendDraft(){socket.emit("updateDraft",{roomCode,words:chosen.map(i=>myTiles[i])});}
 socket.on("yourTiles",t=>{myTiles=t;renderTiles();renderSentence();});
-socket.on("state",s=>{state=s;renderPlayers();renderScoreboard();if(s.phase==="voting")renderSubs();if(s.phase==="lobby")setTimeControl();});
+socket.on("state",s=>{state=s;renderPlayers();renderScoreboard();if(s.phase==="lobby")setTimeControl();});
 socket.on("roundStarted",d=>{$("submit").disabled=false;show("game");myVote=null;$("round").textContent="ROUND "+d.round;$("prompt").textContent=d.prompt;$("winner").classList.add("hidden");$("submissions").classList.add("hidden");$("status").textContent="";chosen=[];startTimer(d.deadline);renderTiles();renderSentence();renderScoreboard();});
 socket.on("allSubmitted",()=>{$("status").textContent="Everyone has submitted — vote!";clearInterval(timer);renderSubs();});
 socket.on("timeUp",()=>{$("status").textContent="Time's up! Your current note was submitted automatically.";$("submit").disabled=true;clearInterval(timer);renderSubs();});
