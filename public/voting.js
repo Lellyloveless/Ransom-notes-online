@@ -3,6 +3,13 @@ const roomCode = localStorage.getItem("roomCode");
 const myId = localStorage.getItem("playerId");
 let myVote = null;
 
+if (roomCode) {
+  socket.emit("requestState", roomCode);
+} else {
+  console.error("No roomCode found in localStorage");
+}
+
+
 socket.emit("requestState", roomCode);
 
 const $ = id => document.getElementById(id);
