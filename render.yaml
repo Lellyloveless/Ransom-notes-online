@@ -1,8 +1,0 @@
-services:
-  - type: web
-    name: ransom-notes-online
-    runtime: node
-    plan: free
-    buildCommand: npm install
-    startCommand: npm start
-    healthCheckPath: /health
