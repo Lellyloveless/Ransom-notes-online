@@ -3,7 +3,8 @@ let roomCode="",myId="",myTiles=[],chosen=[],timer=null,state=null,myVote=null;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 function show(x){["home","lobby","game"].forEach(id=>$(id).classList.toggle("hidden",id!==x));}
-function enter(r){if(r.error)return $("error").textContent=r.error;roomCode=r.roomCode;myId=r.playerId;$("roomLabel").textContent=roomCode;show(r.spectator?"game":"lobby");history.replaceState({},"",`?room=${roomCode}`);}
+function enter(r){if(r.error)return $("error").textContent=r.error;roomCode=r.roomCode;myId=r.playerId;localStorage.setItem("roomCode", roomCode);
+    localStorage.setItem("playerId", myId);$("roomLabel").textContent=roomCode;show(r.spectator?"game":"lobby");history.replaceState({},"",`?room=${roomCode}`);}
 $("create").onclick=()=>socket.emit("createRoom",{name:$("name").value.trim()},enter);
 $("join").onclick=()=>socket.emit("joinRoom",{roomCode:$("room").value.trim(),name:$("name").value.trim()},enter);
 $("start").onclick=()=>socket.emit("startRound",{roomCode},r=>{if(r.error)$("lobbyMsg").textContent=r.error;});
