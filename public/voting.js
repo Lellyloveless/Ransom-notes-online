@@ -1,18 +1,26 @@
 const socket = io();
-const roomCode = localStorage.getItem("roomCode");
-const myId = localStorage.getItem("playerId");
+
+let roomCode = null;
+let myId = null;
 let myVote = null;
-
-if (roomCode) {
-  socket.emit("requestState", roomCode);
-} else {
-  console.error("No roomCode found in localStorage");
-}
-
 
 const $ = id => document.getElementById(id);
 
-// Listen for game state updates
+// ⭐ Wait until socket is connected before requesting state
+socket.on("connect", () => {
+    roomCode = localStorage.getItem("roomCode");
+    myId = localStorage.getItem("playerId");
+
+    if (!roomCode) {
+        console.error("No roomCode found in localStorage");
+        return;
+    }
+
+    console.log("Requesting state for room:", roomCode);
+    socket.emit("requestState", roomCode);
+});
+
+// Receive state
 socket.on("state", state => {
     if (state.phase !== "voting") return;
 
@@ -25,7 +33,10 @@ socket.on("state", state => {
         const div = document.createElement("div");
         div.className = "submission";
 
-        const text = sub.words.length ? sub.words.join(" ") : "(No words submitted)";
+        const text = sub.words.length
+            ? sub.words.join(" ")
+            : "(No words submitted)";
+
         let action = "";
 
         if (id === myId) {
@@ -74,14 +85,16 @@ function updateTimer(deadline) {
         const seconds = Math.floor(remaining / 1000);
         timerEl.textContent = seconds + "s";
 
-        if (seconds <= 30) timerEl.classList.add("red-timer");
+        if (seconds <= 30)
+            timerEl.classList.add("red-timer");
+
         requestAnimationFrame(tick);
     }
 
     tick();
 }
 
-// Show winner
+// Winner
 socket.on("roundWinner", data => {
     const names = data.names.join(" & ");
     $("winner").classList.remove("hidden");
