@@ -319,6 +319,12 @@ io.on("connection", (s) => {
     cb({ ok: true });
   });
 
+s.on("requestState", (roomCode) => {
+  const r = rooms.get(roomCode);
+  if (r) broadcast(roomCode);
+});
+
+
   s.on("disconnect", () => {
     const code = s.data.room;
     const r = rooms.get(code);
