@@ -3,6 +3,8 @@ const roomCode = localStorage.getItem("roomCode");
 const myId = localStorage.getItem("playerId");
 let myVote = null;
 
+socket.emit("requestState", roomCode);
+
 const $ = id => document.getElementById(id);
 
 // Listen for game state updates
