@@ -7,18 +7,32 @@ const { Server } = require("socket.io");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-app.use(express.static(path.join(__dirname, "public"), { setHeaders: (res) => res.setHeader("Cache-Control", "no-store") }));
-app.get("/health", (_, res) => res.json({ status: "ok", version: "2.2.0" }));
+
+app.use(
+  express.static(path.join(__dirname, "public"), {
+    setHeaders: (res) => res.setHeader("Cache-Control", "no-store"),
+  })
+);
+
+app.get("/health", (_, res) => res.json({ status: "ok", version: "2.2.1" }));
 
 const prompts = [
-  "Give the worst excuse for being late.", "Describe a terrible invention.",
-  "Explain why the police are at your door.", "Write a dating profile for a garden gnome.",
-  "Describe the world's worst superhero.", "Create a slogan for a terrible restaurant.",
-  "Explain why you absolutely cannot go to work today.", "Describe the worst thing to say on a first date.",
-  "Explain why you are banned from the local supermarket.", "Write a warning label for a suspicious object.",
-  "Describe the worst possible wedding speech.", "Explain what your pet is secretly planning.",
-  "Give a terrible solution to a very serious problem.", "Describe your dream job if you had absolutely no qualifications.",
-  "Explain why your neighbour has called the police.", "Create an advertisement for something nobody should buy."
+  "Give the worst excuse for being late.",
+  "Describe a terrible invention.",
+  "Explain why the police are at your door.",
+  "Write a dating profile for a garden gnome.",
+  "Describe the world's worst superhero.",
+  "Create a slogan for a terrible restaurant.",
+  "Explain why you absolutely cannot go to work today.",
+  "Describe the worst thing to say on a first date.",
+  "Explain why you are banned from the local supermarket.",
+  "Write a warning label for a suspicious object.",
+  "Describe the worst possible wedding speech.",
+  "Explain what your pet is secretly planning.",
+  "Give a terrible solution to a very serious problem.",
+  "Describe your dream job if you had absolutely no qualifications.",
+  "Explain why your neighbour has called the police.",
+  "Create an advertisement for something nobody should buy.",
 ];
 
 // Built-in pool. Add as many extra words as you like to custom_words.txt.
@@ -28,63 +42,69 @@ const words = [
 
 function loadCustomWords() {
   try {
-    return fs.readFileSync(path.join(__dirname, "custom_words.txt"), "utf8")
-      .split(/\r?\n/).map(w => w.trim())
-      .filter(w => w && !w.startsWith("#") && w.length <= 30);
-  } catch { return []; }
+    return fs
+      .readFileSync(path.join(__dirname, "custom_words.txt"), "utf8")
+      .split(/\r?\n/)
+      .map((w) => w.trim())
+      .filter((w) => w && !w.startsWith("#") && w.length <= 30);
+  } catch {
+    return [];
+  }
 }
-function wordPool() { return [...new Set([...words, ...loadCustomWords()])]; }
+
+function wordPool() {
+  return [...new Set([...words, ...loadCustomWords()])];
+}
 
 const rooms = new Map();
-const makeCode = () => { let c; do c = Math.random().toString(36).slice(2,6).toUpperCase(); while (rooms.has(c)); return c; };
-const makeTiles = () => [...wordPool()].sort(() => Math.random() - .5).slice(0, 100);
-const publicPlayers = r => Object.fromEntries(Object.entries(r.players).map(([id,p]) => [id,{name:p.name,score:p.score,connected:p.connected}]));
+
+const makeCode = () => {
+  let c;
+  do c = Math.random().toString(36).slice(2, 6).toUpperCase();
+  while (rooms.has(c));
+  return c;
+};
+
+const makeTiles = () =>
+  [...wordPool()].sort(() => Math.random() - 0.5).slice(0, 100);
+
+const publicPlayers = (r) =>
+  Object.fromEntries(
+    Object.entries(r.players).map(([id, p]) => [
+      id,
+      { name: p.name, score: p.score, connected: p.connected },
+    ])
+  );
+
+const activePlayerIds = (r) =>
+  Object.keys(r.players).filter((id) => r.players[id].connected);
+
 function broadcast(code) {
-  const r = rooms.get(code); if (!r) return;
-  io.to(code).emit("state", { phase:r.phase, round:r.round, prompt:r.prompt, host:r.host, players:publicPlayers(r), submissions:r.submissions, scores:Object.fromEntries(Object.entries(r.players).map(([id,p])=>[id,p.score])), roundMinutes:r.roundMinutes, deadline:r.deadline, votes:r.votes });
-}
-function finishWriting(code, reason="submitted") {
-  const r=rooms.get(code);
-  if(!r || r.phase!=="writing") return false;
-  if(r.timer){clearTimeout(r.timer);r.timer=null;}
-  for(const [id,p] of Object.entries(r.players)) if(!r.submissions[id]) r.submissions[id]={name:p.name,words:Array.isArray(p.draft)?p.draft.slice(0,100):[],auto:true};
-  r.phase="voting"; r.deadline=null;
-  io.to(code).emit(reason==="timeout"?"timeUp":"allSubmitted");
-  io.to(code).emit("votingStarted");
-  broadcast(code);
-  return true;
+  const r = rooms.get(code);
+  if (!r) return;
+  io.to(code).emit("state", {
+    phase: r.phase,
+    round: r.round,
+    prompt: r.prompt,
+    host: r.host,
+    players: publicPlayers(r),
+    submissions: r.submissions,
+    scores: Object.fromEntries(
+      Object.entries(r.players).map(([id, p]) => [id, p.score])
+    ),
+    roundMinutes: r.roundMinutes,
+    deadline: r.deadline,
+    votes: r.votes,
+  });
 }
 
-io.on("connection", s => {
-  s.on("createRoom", ({name},cb) => {
-    if(!name?.trim()) return cb({error:"Enter a name."});
-    const code=makeCode(); const r={players:{},spectators:{},host:s.id,phase:"lobby",round:0,prompt:"",submissions:{},votes:{},roundMinutes:2,deadline:null,timer:null};
-    r.players[s.id]={name:name.trim().slice(0,24),score:0,connected:true,tiles:[],draft:[]}; rooms.set(code,r); s.join(code); s.data.room=code; cb({ok:true,roomCode:code,playerId:s.id}); broadcast(code);
-  });
-  s.on("joinRoom", ({roomCode,name},cb) => {
-    const code=(roomCode||"").toUpperCase(),r=rooms.get(code); if(!r) return cb({error:"Room not found."}); if(!name?.trim()) return cb({error:"Enter a name."});
-    if(Object.keys(r.players).length>=8){r.spectators[s.id]={name:name.trim().slice(0,24)};s.join(code);s.data.room=code;cb({ok:true,spectator:true,roomCode:code,playerId:s.id});broadcast(code);return;}
-    r.players[s.id]={name:name.trim().slice(0,24),score:0,connected:true,tiles:[],draft:[]};s.join(code);s.data.room=code;cb({ok:true,roomCode:code,playerId:s.id});broadcast(code);
-  });
-  s.on("setRoundTime", ({roomCode,minutes},cb={}) => {const r=rooms.get(roomCode),n=Number(minutes);if(!r)return cb({error:"Room not found."});if(s.id!==r.host)return cb({error:"Only the host can choose the time."});if(!Number.isInteger(n)||n<2||n>10)return cb({error:"Choose between 2 and 10 minutes."});if(r.phase!=="lobby")return cb({error:"Time can only be changed in the lobby."});r.roundMinutes=n;broadcast(roomCode);cb({ok:true});});
-  s.on("startRound", ({roomCode},cb={}) => {
-    const r=rooms.get(roomCode); if(!r)return cb({error:"Room not found."}); if(s.id!==r.host)return cb({error:"Only the host can start."}); if(Object.keys(r.players).length<3)return cb({error:"At least 3 players are required."});
-    r.round++;r.phase="writing";r.prompt=prompts[Math.floor(Math.random()*prompts.length)];r.submissions={};r.votes={};r.deadline=Date.now()+r.roundMinutes*60*1000;
-    for(const [id,p] of Object.entries(r.players)){p.tiles=makeTiles();p.draft=[];io.to(id).emit("yourTiles",p.tiles);}
-    io.to(roomCode).emit("roundStarted",{prompt:r.prompt,round:r.round,minutes:r.roundMinutes,deadline:r.deadline});broadcast(roomCode);r.timer=setTimeout(()=>finishWriting(roomCode,"timeout"),r.roundMinutes*60*1000);cb({ok:true});
-  });
-  s.on("updateDraft", ({roomCode,words:chosen},cb={}) => {const r=rooms.get(roomCode),p=r?.players[s.id];if(!p||r.phase!=="writing")return cb({error:"Draft not accepted."});if(!Array.isArray(chosen)||chosen.length>100||!chosen.every(w=>p.tiles.includes(w)))return cb({error:"Use only your supplied words."});p.draft=chosen;cb({ok:true});});
-  s.on("submit", ({roomCode,words:chosen},cb={}) => {
-    const r=rooms.get(roomCode),p=r?.players[s.id];
-    if(!p || r.phase!=="writing") return cb({error:"Submissions are closed."});
-    if(!Array.isArray(chosen) || chosen.length>100 || !chosen.every(w=>p.tiles.includes(w))) return cb({error:"Use only your supplied words."});
-    p.draft=chosen.slice(0,100);
-    r.submissions[s.id]={name:p.name,words:p.draft.slice(),auto:false};
-    if(Object.keys(r.submissions).length >= Object.keys(r.players).length) finishWriting(roomCode,"submitted");
-    else broadcast(roomCode);
-    cb({ok:true});
-  });
-  s.on("vote", ({roomCode,target},cb={}) => {const r=rooms.get(roomCode);if(!r||r.phase!=="voting"||!r.players[s.id]||s.id===target||!r.submissions[target])return cb({error:"Vote not accepted."});if(r.votes[s.id])return cb({error:"You have already voted."});r.votes[s.id]=target;if(Object.keys(r.votes).length===Object.keys(r.players).length){const counts={};Object.values(r.votes).forEach(t=>counts[t]=(counts[t]||0)+1);const max=Math.max(...Object.values(counts));const winners=Object.keys(counts).filter(id=>counts[id]===max);winners.forEach(id=>r.players[id].score++);r.phase="results";io.to(roomCode).emit("roundWinner",{names:winners.map(id=>r.players[id].name),scores:Object.fromEntries(winners.map(id=>[id,r.players[id].score]))});}broadcast(roomCode);cb({ok:true});});
-  s.on("disconnect",()=>{const code=s.data.room,r=rooms.get(code);if(!r)return;if(r.players[s.id])r.players[s.id].connected=false;delete r.spectators[s.id];if(r.host===s.id){const next=Object.keys(r.players).find(id=>r.players[id].connected);if(next)r.host=next;}broadcast(code);});
-});
-const PORT=Number(process.env.PORT)||10000;server.listen(PORT,"0.0.0.0",()=>console.log(`Listening on ${PORT}`));
+function finishWriting(code, reason = "submitted") {
+  const r = rooms.get(code);
+  if (!r || r.phase !== "writing") return false;
+
+  if (r.timer) {
+    clearTimeout(r.timer);
+    r.timer = null;
+  }
+
+  // Auto-submit for all players (connected or not), with empty drafts
