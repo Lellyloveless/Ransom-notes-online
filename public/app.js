@@ -50,6 +50,10 @@ function renderSubs(){
     });
   });
 }
-function startTimer(deadline){clearInterval(timer);function tick(){const left=Math.max(0,deadline-Date.now());const total=Math.ceil(left/1000);const m=String(Math.floor(total/60)).padStart(2,"0"),s=String(total%60).padStart(2,"0");$("timer").textContent=`${m}:${s}`;if(total<=0)clearInterval(timer);}tick();timer=setInterval(tick,250);}
+function startTimer(deadline){clearInterval(timer);function tick(){const left=Math.max(0,deadline-Date.now());const total=Math.ceil(left/1000);const m=String(Math.floor(total/60)).padStart(2,"0"),s=String(total%60).padStart(2,"0");$("timer").textContent=`${m}:${s}`;if (total <= 30) {
+            $("timer").classList.add("red-timer");
+        } else {
+            $("timer").classList.remove("red-timer");
+        }if(total<=0)clearInterval(timer);}tick();timer=setInterval(tick,250);}
 window.nextRound=()=>socket.emit("startRound",{roomCode},r=>{if(r.error)$("status").textContent=r.error;});
 const q=new URLSearchParams(location.search);if(q.get("room"))$("room").value=q.get("room").toUpperCase();
