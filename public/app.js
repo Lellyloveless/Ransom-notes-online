@@ -18,7 +18,9 @@ socket.on("state",s=>{state=s;renderPlayers();renderScoreboard();if(s.phase==="v
 socket.on("roundStarted",d=>{$("submit").disabled=false;show("game");myVote=null;$("round").textContent="ROUND "+d.round;$("prompt").textContent=d.prompt;$("winner").classList.add("hidden");$("submissions").classList.add("hidden");$("status").textContent="";chosen=[];startTimer(d.deadline);renderTiles();renderSentence();renderScoreboard();});
 socket.on("allSubmitted",()=>{$("status").textContent="Everyone has submitted — vote!";clearInterval(timer);renderSubs();});
 socket.on("timeUp",()=>{$("status").textContent="Time's up! Your current note was submitted automatically.";$("submit").disabled=true;clearInterval(timer);renderSubs();});
-socket.on("votingStarted",()=>{clearInterval(timer);renderSubs();});
+socket.on("votingStarted", () => {
+    window.location.href = "/voting.html";
+});
 socket.on("roundWinner",d=>{$("winner").classList.remove("hidden");const names=d.names.join(" & ");$("winner").innerHTML=`🏆 ${esc(names)} ${d.names.length===1?"WINS":"WIN"}!<br><small>+1 point${d.names.length===1?"":" each"}</small><button onclick="nextRound()">NEXT ROUND</button>`;renderScoreboard();});
 function renderPlayers(){if(!state)return;$("players").innerHTML=Object.entries(state.players).map(([id,p])=>`<div class="player"><span>${esc(p.name)}${id===myId?" (YOU)":""}</span><span>${p.score} pts</span></div>`).join("");if(state.phase==="lobby"){$("lobbyMsg").textContent=Object.keys(state.players).length<3?"Waiting for at least 3 players…":"Ready to start!";$('start').disabled=Object.keys(state.players).length<3;setTimeControl();}}
 function renderScoreboard(){if(!state||!$("scoreboard"))return;const rows=Object.entries(state.players).sort((a,b)=>b[1].score-a[1].score);$("scoreboard").innerHTML=rows.map(([id,p],i)=>`<div class="score-row ${id===myId?"me":""}"><span>${i+1}. ${esc(p.name)}</span><strong>${p.score}</strong></div>`).join("");}
