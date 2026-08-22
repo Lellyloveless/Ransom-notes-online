@@ -20,6 +20,7 @@ socket.on("roundStarted",d=>{$("submit").disabled=false;show("game");myVote=null
 socket.on("allSubmitted",()=>{$("status").textContent="Everyone has submitted — vote!";clearInterval(timer);renderSubs();});
 socket.on("timeUp",()=>{$("status").textContent="Time's up! Your current note was submitted automatically.";$("submit").disabled=true;clearInterval(timer);renderSubs();});
 socket.on("votingStarted", () => {
+    socket.disconnect()
     window.location.href = "/voting.html";
 });
 socket.on("roundWinner",d=>{$("winner").classList.remove("hidden");const names=d.names.join(" & ");$("winner").innerHTML=`🏆 ${esc(names)} ${d.names.length===1?"WINS":"WIN"}!<br><small>+1 point${d.names.length===1?"":" each"}</small><button onclick="nextRound()">NEXT ROUND</button>`;renderScoreboard();});
