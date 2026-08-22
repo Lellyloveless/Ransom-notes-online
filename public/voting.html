@@ -2,20 +2,24 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Voting — Ransom Notes Online</title>
+    <title>Voting Round</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="voting-page">
+<body>
 
-    <h1>Voting Round</h1>
+<main>
+    <h1>VOTING ROUND</h1>
 
-    <div id="prompt"></div>
+    <div id="prompt" class="prompt"></div>
+
+    <div id="timer" class="gamehead"></div>
 
     <div id="submissions"></div>
 
-    <div id="timer" class="timer"></div>
+    <div id="winner" class="winner hidden"></div>
+</main>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="voting.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="voting.js"></script>
 </body>
 </html>
