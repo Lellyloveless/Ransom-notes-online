@@ -10,8 +10,6 @@ if (roomCode) {
 }
 
 
-socket.emit("requestState", roomCode);
-
 const $ = id => document.getElementById(id);
 
 // Listen for game state updates
