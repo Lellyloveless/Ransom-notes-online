@@ -1,20 +1,16 @@
 const socket = io();
-
 const roomCode = localStorage.getItem("roomCode");
 const myId = localStorage.getItem("playerId");
-
 let myVote = null;
 
 const $ = id => document.getElementById(id);
 
-// Receive full game state
+// Listen for game state updates
 socket.on("state", state => {
     if (state.phase !== "voting") return;
 
-    // Show prompt
     $("prompt").textContent = state.prompt;
 
-    // Show submissions
     const container = $("submissions");
     container.innerHTML = "";
 
@@ -22,10 +18,7 @@ socket.on("state", state => {
         const div = document.createElement("div");
         div.className = "submission";
 
-        const text = sub.words.length
-            ? sub.words.join(" ")
-            : "(No words submitted)";
-
+        const text = sub.words.length ? sub.words.join(" ") : "(No words submitted)";
         let action = "";
 
         if (id === myId) {
@@ -38,31 +31,24 @@ socket.on("state", state => {
             action = `<button class="vote-btn" data-id="${id}">Vote</button>`;
         }
 
-        div.innerHTML = `
-            <div class="note-text">${text}</div>
-            ${action}
-        `;
-
+        div.innerHTML = `<div class="note-text">${text}</div>${action}`;
         container.appendChild(div);
     });
 
     updateTimer(state.deadline);
 });
 
-// Handle vote button clicks
+// Handle vote clicks
 document.addEventListener("click", e => {
     if (!e.target.classList.contains("vote-btn")) return;
-
-    if (myVote) return; // already voted
+    if (myVote) return;
 
     const target = e.target.dataset.id;
     myVote = target;
 
     socket.emit("vote", { roomCode, target }, res => {
-        if (!res.ok) {
-            myVote = null;
-        }
-        socket.emit("requestState", roomCode); // refresh UI
+        if (!res.ok) myVote = null;
+        socket.emit("requestState", roomCode);
     });
 });
 
@@ -81,17 +67,14 @@ function updateTimer(deadline) {
         const seconds = Math.floor(remaining / 1000);
         timerEl.textContent = seconds + "s";
 
-        if (seconds <= 30) {
-            timerEl.classList.add("red-timer");
-        }
-
+        if (seconds <= 30) timerEl.classList.add("red-timer");
         requestAnimationFrame(tick);
     }
 
     tick();
 }
 
-// Winner announcement
+// Show winner
 socket.on("roundWinner", data => {
     const names = data.names.join(" & ");
     $("winner").classList.remove("hidden");
@@ -102,7 +85,6 @@ socket.on("roundWinner", data => {
     `;
 });
 
-// Start next round
 function nextRound() {
     socket.emit("startRound", { roomCode });
 }
